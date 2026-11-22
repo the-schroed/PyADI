@@ -1,9 +1,7 @@
 """CLI entry point."""
 import argparse
-import sys
 
-from .frames import normalize
-from .render.pillow_backend import render, render_adu
+from .render.pillow_backend import render_sphere
 
 
 def main():
@@ -25,7 +23,7 @@ def main():
     else:
         roll, pitch, yaw = args.roll, args.pitch, args.yaw
 
-    from .render.pillow_backend import render_adu, render_sphere
+    from .render.pillow_backend import render_adu
     img = render_adu(roll, pitch, yaw, size=args.size) if args.__dict__.get("2d") else render_sphere(roll, pitch, yaw, size=args.size, grid=args.grid, labels=not args.no_labels)
     img.save(args.out)
     print(f"saved {args.out}  roll={roll:.2f} pitch={pitch:.2f} yaw={yaw:.2f}")

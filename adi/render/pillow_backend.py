@@ -1,8 +1,9 @@
 """Pillow backend: render an ADI to a PIL Image."""
 import math
+
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from scipy.spatial.transform import Rotation
-import numpy as np
 
 
 def _shade(base, n, light=(0.4, 0.6, 0.7)):
@@ -39,7 +40,7 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     draw = ImageDraw.Draw(img)
     try:
         font = ImageFont.load_default()
-    except Exception:
+    except OSError:
         font = None
     cx, cy = size // 2, size // 2
     r = size // 2 - 10
@@ -47,7 +48,6 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     # rotation body->inertial from RPY (aerospace ZYX)
     R = Rotation.from_euler("ZYX", [yaw, pitch, roll], degrees=True).as_matrix()
 
-    pass
     for y in range(cy - r, cy + r + 1):
         for x in range(cx - r, cx + r + 1):
             dx = (x - cx) / r
@@ -99,12 +99,11 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
         draw.line(seg, fill=(255, 255, 255), width=2)
 
     # latitude/longitude grid on sphere
-    pass
     # parallels (latitude)
     for lat in range(-90, 91, grid):
         la = math.radians(lat)
         seg = []
-        prev_z = None
+
         for i in range(361):
             lo = math.radians(i)
             bx = math.cos(la) * math.cos(lo)
@@ -115,10 +114,8 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
                 if len(seg) > 1:
                     draw.line(seg, fill=grid_color, width=1)
                 seg = []
-                prev_z = p_view[2]
                 continue
             seg.append((cx + p_view[0] * r, cy - p_view[1] * r))
-            prev_z = p_view[2]
         if len(seg) > 1:
             draw.line(seg, fill=grid_color, width=1)
         # elevation labels on four meridians for every 30 deg latitude
@@ -144,7 +141,7 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     for lo in range(0, 360, grid):
         lo_r = math.radians(lo)
         seg = []
-        prev_z = None
+
         for i in range(-90, 91):
             la = math.radians(i)
             bx = math.cos(la) * math.cos(lo_r)
@@ -155,10 +152,8 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
                 if len(seg) > 1:
                     draw.line(seg, fill=grid_color, width=1)
                 seg = []
-                prev_z = p_view[2]
                 continue
             seg.append((cx + p_view[0] * r, cy - p_view[1] * r))
-            prev_z = p_view[2]
         if len(seg) > 1:
             draw.line(seg, fill=grid_color, width=1)
         # longitude label for every meridian
@@ -184,7 +179,7 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     if labels:
         try:
             font = ImageFont.load_default()
-        except Exception:
+        except OSError:
             font = None
         label_items = [("X", (1, 0, 0)), ("Y", (0, 1, 0)), ("Z", (0, 0, 1)),
                        ("-X", (-1, 0, 0)), ("-Y", (0, -1, 0)), ("-Z", (0, 0, -1))]
@@ -202,7 +197,7 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
 
     try:
         font = ImageFont.load_default()
-    except Exception:
+    except OSError:
         font = None
     draw.text((10, 10), f"Roll {roll:+.1f}  Pitch {pitch:+.1f}  Yaw {yaw:+.1f}", fill=(255, 255, 255), font=font)
     return img
@@ -214,7 +209,7 @@ def render_adu(roll, pitch, yaw=0.0, size=400, bg=(20, 20, 30)):
     draw = ImageDraw.Draw(img)
     try:
         font = ImageFont.load_default()
-    except Exception:
+    except OSError:
         font = None
     cx, cy = size // 2, size // 2
     r = size // 2 - 10
@@ -284,7 +279,7 @@ def render_adu(roll, pitch, yaw=0.0, size=400, bg=(20, 20, 30)):
 
     try:
         font = ImageFont.load_default()
-    except Exception:
+    except OSError:
         font = None
     draw.text((10, 10), f"Roll {roll:+.1f}  Pitch {pitch:+.1f}  Yaw {yaw:+.1f}", fill=(255, 255, 255), font=font)
     return img

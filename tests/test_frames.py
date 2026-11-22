@@ -1,5 +1,6 @@
 import numpy as np
-from adi.frames import normalize, rpy_deg, quat_mul, quat_conj
+
+from adi.frames import normalize, quat_conj, quat_mul, rpy_deg
 
 
 def test_normalize():

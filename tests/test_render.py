@@ -1,4 +1,4 @@
-from adi.render.pillow_backend import render_sphere, render_adu
+from adi.render.pillow_backend import render_adu, render_sphere
 
 
 def test_render_sphere_size():
