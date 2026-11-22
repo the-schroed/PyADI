@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adi"
+version = "0.1.0"
+description = "Attitude Determination Indicator (ADI) in Python"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "Pillow"]
+
+[project.scripts]
+adi = "adi.cli:main"
