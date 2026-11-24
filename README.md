@@ -20,7 +20,17 @@ pip install -r requirements.txt
 ```
 python -m adi.cli --roll 20 --pitch -10 --yaw 30 --out adi.png
 python -m adi.cli --quat 1 0 0 0 --out q.png
+python -m adi.cli --2d --roll 20 --pitch -10 --out classic.png
 ```
+
+Options:
+- `--quat W X Y Z`: scalar-first quaternion input (overrides `--roll/--pitch/--yaw`)
+- `--roll`, `--pitch`, `--yaw`: Euler angles in degrees (default 0)
+- `--2d`: render the classic 2D ADI instead of the 3D sphere
+- `--size`: image size in pixels (default 400)
+- `--grid`: grid spacing in degrees for the 3D sphere (default 15)
+- `--no-labels`: hide axis and angle labels
+- `--out`: output file path (default `adi.png`)
 
 ## FastAPI demo
 ```

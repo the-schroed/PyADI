@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- `normalize()`: removed a dead branch with no behavior change.
+- FastAPI demo: grid slider now starts at 15 to match its number input.
+- Tests: gimbal-lock warning is expected explicitly, so test output is clean.
+- README: documented CLI options, including `--2d` and `--quat`.
+
 ## 0.1.1
 - Sphere renderer rewritten with numpy; about 30x faster at 800px. Output matches 0.1.0 except for single-level rounding differences in a few pixels.
 - Horizon line now honors `horizon_color`.
