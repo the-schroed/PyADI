@@ -1,3 +1,4 @@
+﻿import numpy as np
 import pytest
 from PIL import Image
 
@@ -52,7 +53,7 @@ def test_2d_flag_selects_render_adu(monkeypatch, tmp_path):
 def test_sphere_options_are_passed_through(monkeypatch, tmp_path, extra, expected):
     seen = {}
 
-    def fake_sphere(roll, pitch, yaw, size, grid, labels):
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers):
         seen.update(size=size, grid=grid, labels=labels)
         return Image.new("RGB", (1, 1))
 
@@ -60,3 +61,45 @@ def test_sphere_options_are_passed_through(monkeypatch, tmp_path, extra, expecte
     run_cli(monkeypatch, "--out", str(tmp_path / "s.png"), "--size", "77", *extra)
 
     assert seen == dict(size=77, **expected)
+
+def test_overlay_inputs_are_passed_to_renderer(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers):
+        seen.update(command=command, markers=markers)
+        return Image.new("RGB", (1, 1))
+
+    monkeypatch.setattr("adi.cli.render_sphere", fake_sphere)
+    run_cli(monkeypatch, "--out", str(tmp_path / "o.png"),
+            "--cmd-quat", "1", "0", "0", "0",
+            "--r", "7000", "0", "0", "--v", "0", "7.5", "0")
+
+    assert seen["command"] == (0.0, 0.0, 0.0)
+    assert np.allclose(seen["markers"]["prograde"], [0, 1, 0])
+    assert np.allclose(seen["markers"]["normal"], [0, 0, 1])
+
+
+def test_no_overlays_by_default(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers):
+        seen.update(command=command, markers=markers)
+        return Image.new("RGB", (1, 1))
+
+    monkeypatch.setattr("adi.cli.render_sphere", fake_sphere)
+    run_cli(monkeypatch, "--out", str(tmp_path / "o.png"))
+
+    assert seen == {"command": None, "markers": None}
+
+
+def test_r_without_v_is_an_error(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, "--r", "1", "0", "0", "--out", str(tmp_path / "o.png"))
+    assert "--r and --v must be given together" in capsys.readouterr().err
+
+
+def test_overlays_rejected_with_2d(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, "--2d", "--cmd-quat", "1", "0", "0", "0", "--out", str(tmp_path / "o.png"))
+    assert "only supported in the 3D view" in capsys.readouterr().err
+
