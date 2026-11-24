@@ -26,8 +26,10 @@ python -m adi.cli --quat 0.99 0 0.1 0 --cmd-quat 1 0 0 0 --r 7000 0 0 --v 0 7.5 
 
 Options:
 - `--quat W X Y Z`: actual attitude, scalar-first, body→J2000 (overrides `--roll/--pitch/--yaw`)
-- `--roll`, `--pitch`, `--yaw`: actual attitude as Euler angles in degrees (default 0)
-- `--cmd-quat W X Y Z`: commanded attitude, body→J2000. Roll and pitch error are shown as bars: a vertical bar for roll and a horizontal bar for pitch. Each bar is offset toward the command, and converges onto the crosshair within 0.5°. Bars turn orange when the error exceeds the clamp, where they pin at the edge. Yaw is not shown.
+- `--angles A B C` with `--seq SEQ`: actual attitude as Euler angles in degrees, in any of the 24 sequences (e.g. `ZYX`, `XYZ`, `ZXZ`). Uppercase is intrinsic, lowercase is extrinsic. Default sequence is `ZYX`. Mutually exclusive with `--quat`.
+- `--roll`, `--pitch`, `--yaw`: actual attitude as ZYX (aerospace) Euler angles in degrees (default 0)
+- `--cmd-quat W X Y Z`: commanded attitude, body→J2000.
+- `--cmd-angles A B C` with `--cmd-seq SEQ`: commanded attitude as Euler angles, same rules as `--angles`. Roll and pitch error are shown as bars: a vertical bar for roll and a horizontal bar for pitch. Each bar is offset toward the command, and converges onto the crosshair within 0.5°. Bars turn orange when the error exceeds the clamp, where they pin at the edge. Yaw is not shown.
 - `--cmd-clamp DEG`: error at which bars clamp (default 20)
 - `--cmd-tol DEG`: error below which bars converge and turn green (default 0.5)
 - `--r X Y Z` and `--v X Y Z`: J2000 position and velocity. Draws markers for prograde, retrograde, normal and anti-normal. Give both or neither.
