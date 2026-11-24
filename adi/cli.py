@@ -13,7 +13,7 @@ def main():
     p.add_argument("--pitch", type=float, default=0.0)
     p.add_argument("--yaw", type=float, default=0.0)
     p.add_argument("--cmd-quat", nargs=4, type=float, metavar=("W", "X", "Y", "Z"),
-                   help="commanded attitude quaternion, body->J2000, drawn as dashed lines")
+                   help="commanded attitude quaternion, body->J2000, shown as roll/pitch error bars")
     p.add_argument("--r", nargs=3, type=float, metavar=("X", "Y", "Z"),
                    help="position vector in J2000; with --v, marks prograde/retrograde/normal/anti-normal")
     p.add_argument("--v", nargs=3, type=float, metavar=("X", "Y", "Z"),

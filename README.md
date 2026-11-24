@@ -27,7 +27,7 @@ python -m adi.cli --quat 0.99 0 0.1 0 --cmd-quat 1 0 0 0 --r 7000 0 0 --v 0 7.5 
 Options:
 - `--quat W X Y Z`: actual attitude, scalar-first, body→J2000 (overrides `--roll/--pitch/--yaw`)
 - `--roll`, `--pitch`, `--yaw`: actual attitude as Euler angles in degrees (default 0)
-- `--cmd-quat W X Y Z`: commanded attitude, body→J2000. Its horizon and grid are drawn as dashed lines over the actual ball.
+- `--cmd-quat W X Y Z`: commanded attitude, body→J2000. Roll and pitch error are shown as bars: a vertical bar for roll and a horizontal bar for pitch. Each bar is offset toward the command, and converges onto the crosshair within 0.5°. Bars turn orange when the error exceeds 20°, where they clamp at the edge. Yaw is not shown.
 - `--r X Y Z` and `--v X Y Z`: J2000 position and velocity. Draws markers for prograde, retrograde, normal and anti-normal. Give both or neither.
 - `--2d`: render the classic 2D ADI instead of the 3D sphere (not compatible with `--cmd-quat` or `--r/--v`)
 - `--size`: image size in pixels (default 400)

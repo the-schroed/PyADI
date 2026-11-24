@@ -21,7 +21,7 @@ def index():
 <label>Yaw <input id="yaw" type="range" min="-180" max="180" value="30"> <input id="yawn" type="number" min="-180" max="180" value="30"></label><br>
 <label>Size <input id="size" type="range" min="200" max="800" value="400"> <input id="sizen" type="number" min="200" max="800" value="400"></label><br>
 <label>Grid <input id="grid" type="range" min="5" max="45" value="15"> <input id="gridn" type="number" min="5" max="45" value="15"></label><br>
-<label><input id="showcmd" type="checkbox"> Commanded attitude (dashed)</label>
+<label><input id="showcmd" type="checkbox"> Commanded attitude (error bars)</label>
 Roll <input id="cmdroll" type="number" value="0"> Pitch <input id="cmdpitch" type="number" value="0"> Yaw <input id="cmdyaw" type="number" value="0"><br>
 <label><input id="showorb" type="checkbox"> Orbit markers (J2000)</label>
 r <input id="rx" type="number" value="7000"> <input id="ry" type="number" value="0"> <input id="rz" type="number" value="0">
