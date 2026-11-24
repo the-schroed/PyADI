@@ -20,8 +20,6 @@ def normalize(q):
     n = np.linalg.norm(q)
     if n == 0:
         raise ValueError("zero quaternion")
-    if abs(n - 1.0) > 1e-9:
-        pass
     return q / n
 
 
