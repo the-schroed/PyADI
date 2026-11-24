@@ -6,10 +6,30 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy.spatial.transform import Rotation
 
 
-def _shade(base, n, light=(0.4, 0.6, 0.7)):
-    dot = max(0.0, n[0]*light[0] + n[1]*light[1] + n[2]*light[2])
-    f = 0.35 + 0.65 * dot
-    return tuple(int(c * f) for c in base)
+def _load_font():
+    try:
+        return ImageFont.load_default()
+    except OSError:
+        return None
+
+
+_LIGHT = np.array([0.4, 0.6, 0.7])
+
+
+def _fill_sphere(img, R, cx, cy, r, sky, ground):
+    ys, xs = np.mgrid[cy - r:cy + r + 1, cx - r:cx + r + 1]
+    dx = (xs - cx) / r
+    dy = (ys - cy) / r
+    rr2 = dx * dx + dy * dy
+    inside = rr2 <= 1.0
+    p_view = np.stack([dx[inside], -dy[inside], np.sqrt(np.maximum(0.0, 1.0 - rr2[inside]))], axis=1)
+    p_body = p_view @ R
+    base = np.where((p_body[:, 2] >= 0)[:, None], sky, ground)
+    f = 0.35 + 0.65 * np.maximum(0.0, p_view @ _LIGHT)
+    colors = (base * f[:, None]).astype(np.uint8)
+    pixels = np.asarray(img).copy()
+    pixels[ys[inside], xs[inside]] = colors
+    return Image.fromarray(pixels)
 
 
 def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labels=True,
@@ -37,66 +57,32 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     PIL.Image.Image
     """
     img = Image.new("RGB", (size, size), bg)
-    draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.load_default()
-    except OSError:
-        font = None
+    font = _load_font()
     cx, cy = size // 2, size // 2
     r = size // 2 - 10
 
     # rotation body->inertial from RPY (aerospace ZYX)
     R = Rotation.from_euler("ZYX", [yaw, pitch, roll], degrees=True).as_matrix()
 
-    for y in range(cy - r, cy + r + 1):
-        for x in range(cx - r, cx + r + 1):
-            dx = (x - cx) / r
-            dy = (y - cy) / r
-            rr2 = dx * dx + dy * dy
-            if rr2 > 1.0:
-                continue
-            dz = math.sqrt(max(0.0, 1.0 - rr2))
-            # point on sphere in view coords; normal = point
-            p_view = np.array([dx, -dy, dz])  # y up
-            # body coords
-            p_body = R.T @ p_view
-            color_base = sky if p_body[2] >= 0 else ground
-            color = _shade(color_base, p_view)
-            img.putpixel((x, y), color)
+    img = _fill_sphere(img, R, cx, cy, r, sky, ground)
+    draw = ImageDraw.Draw(img)
 
     # outline
     draw.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(220, 220, 220), width=2)
 
-    # horizon great circle: points with body z = 0
-    pts = []
-    for i in range(361):
-        ang = math.radians(i)
-        # circle in body xy-plane
-        bx, by, bz = math.cos(ang), math.sin(ang), 0.0
-        p_body = np.array([bx, by, bz])
-        p_view = R @ p_body
-        if p_view[2] < 0:
-            continue
-        x = cx + p_view[0] * r
-        y = cy - p_view[1] * r
-        pts.append((x, y))
-    # draw as polyline segments (breaks when z<0)
+    # horizon great circle: points with body z = 0, drawn as segments that break when hidden
     seg = []
     for i in range(361):
         ang = math.radians(i)
-        bx, by, bz = math.cos(ang), math.sin(ang), 0.0
-        p_body = np.array([bx, by, bz])
-        p_view = R @ p_body
+        p_view = R @ np.array([math.cos(ang), math.sin(ang), 0.0])
         if p_view[2] < 0:
             if len(seg) > 1:
                 draw.line(seg, fill=horizon_color, width=2)
             seg = []
             continue
-        x = cx + p_view[0] * r
-        y = cy - p_view[1] * r
-        seg.append((x, y))
+        seg.append((cx + p_view[0] * r, cy - p_view[1] * r))
     if len(seg) > 1:
-        draw.line(seg, fill=(255, 255, 255), width=2)
+        draw.line(seg, fill=horizon_color, width=2)
 
     # latitude/longitude grid on sphere
     # parallels (latitude)
@@ -126,8 +112,6 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
                 bz = math.sin(math.radians(lat))
                 pv = R @ np.array([bx, by, bz])
                 if pv[2] >= 0:
-                    t = R @ np.array([-math.sin(math.radians(lon)), math.cos(math.radians(lon)), 0.0])
-                    ang = math.degrees(math.atan2(-t[1], t[0]))
                     tmp = Image.new("RGBA", (40, 16), (0, 0, 0, 0))
                     ImageDraw.Draw(tmp).text((0, 0), str(lat), fill=label_color, font=font)
                     bb = tmp.getbbox()
@@ -163,8 +147,6 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
             bz = 0.0
             pv = R @ np.array([bx, by, bz])
             if pv[2] >= 0:
-                t = R @ np.array([0.0, 0.0, 1.0])
-                ang = math.degrees(math.atan2(-t[1], t[0]))
                 tmp = Image.new("RGBA", (40, 16), (0, 0, 0, 0))
                 ImageDraw.Draw(tmp).text((0, 0), str(lo), fill=label_color, font=font)
                 bb = tmp.getbbox()
@@ -177,10 +159,6 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
 
     # billboard labels (screen-upright) projected onto sphere
     if labels:
-        try:
-            font = ImageFont.load_default()
-        except OSError:
-            font = None
         label_items = [("X", (1, 0, 0)), ("Y", (0, 1, 0)), ("Z", (0, 0, 1)),
                        ("-X", (-1, 0, 0)), ("-Y", (0, -1, 0)), ("-Z", (0, 0, -1))]
         for text, vec in label_items:
@@ -195,22 +173,14 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     draw.line((cx - 15, cy, cx + 15, cy), fill=(255, 255, 0), width=2)
     draw.line((cx, cy - 15, cx, cy + 15), fill=(255, 255, 0), width=2)
 
-    try:
-        font = ImageFont.load_default()
-    except OSError:
-        font = None
     draw.text((10, 10), f"Roll {roll:+.1f}  Pitch {pitch:+.1f}  Yaw {yaw:+.1f}", fill=(255, 255, 255), font=font)
     return img
 
 
 def render_adu(roll, pitch, yaw=0.0, size=400, bg=(20, 20, 30)):
-    # keep original 2D ADI
     img = Image.new("RGB", (size, size), bg)
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.load_default()
-    except OSError:
-        font = None
+    font = _load_font()
     cx, cy = size // 2, size // 2
     r = size // 2 - 10
     draw.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(200, 200, 200), width=2)
@@ -277,10 +247,6 @@ def render_adu(roll, pitch, yaw=0.0, size=400, bg=(20, 20, 30)):
     py = cy - (r - 6) * math.cos(ba)
     draw.polygon([(px, py), (px - 6, py + 10), (px + 6, py + 10)], fill=(255, 255, 0))
 
-    try:
-        font = ImageFont.load_default()
-    except OSError:
-        font = None
     draw.text((10, 10), f"Roll {roll:+.1f}  Pitch {pitch:+.1f}  Yaw {yaw:+.1f}", fill=(255, 255, 255), font=font)
     return img
 
