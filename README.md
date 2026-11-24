@@ -21,16 +21,23 @@ pip install -r requirements.txt
 python -m adi.cli --roll 20 --pitch -10 --yaw 30 --out adi.png
 python -m adi.cli --quat 1 0 0 0 --out q.png
 python -m adi.cli --2d --roll 20 --pitch -10 --out classic.png
+python -m adi.cli --quat 0.99 0 0.1 0 --cmd-quat 1 0 0 0 --r 7000 0 0 --v 0 7.5 0 --out ops.png
 ```
 
 Options:
-- `--quat W X Y Z`: scalar-first quaternion input (overrides `--roll/--pitch/--yaw`)
-- `--roll`, `--pitch`, `--yaw`: Euler angles in degrees (default 0)
-- `--2d`: render the classic 2D ADI instead of the 3D sphere
+- `--quat W X Y Z`: actual attitude, scalar-first, body→J2000 (overrides `--roll/--pitch/--yaw`)
+- `--roll`, `--pitch`, `--yaw`: actual attitude as Euler angles in degrees (default 0)
+- `--cmd-quat W X Y Z`: commanded attitude, body→J2000. Its horizon and grid are drawn as dashed lines over the actual ball.
+- `--r X Y Z` and `--v X Y Z`: J2000 position and velocity. Draws markers for prograde, retrograde, normal and anti-normal. Give both or neither.
+- `--2d`: render the classic 2D ADI instead of the 3D sphere (not compatible with `--cmd-quat` or `--r/--v`)
 - `--size`: image size in pixels (default 400)
 - `--grid`: grid spacing in degrees for the 3D sphere (default 15)
 - `--no-labels`: hide axis and angle labels
 - `--out`: output file path (default `adi.png`)
+
+Orbit markers are computed as prograde = v̂, normal = (r × v)̂, with retrograde and anti-normal as their negatives. Markers are fixed to the reference (J2000) frame, so they move relative to the body features as the actual attitude changes. Markers on the far side of the ball are hidden.
+
+The FastAPI demo (`uvicorn examples.fastapi_demo:app`) has controls for both the commanded attitude and orbit markers.
 
 ## FastAPI demo
 ```

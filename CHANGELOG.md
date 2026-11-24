@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added prograde, retrograde, normal and anti-normal markers, computed from J2000 position and velocity (`orbit_directions`, `--r/--v`).
+- Added a commanded attitude option, drawn as dashed horizon and grid lines over the actual attitude (`--cmd-quat`).
+- FastAPI demo: new controls and query parameters for the commanded attitude and orbit markers. Invalid orbit input returns HTTP 400.
 - `normalize()`: removed a dead branch with no behavior change.
 - FastAPI demo: grid slider now starts at 15 to match its number input.
 - Tests: gimbal-lock warning is expected explicitly, so test output is clean.
