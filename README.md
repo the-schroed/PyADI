@@ -37,6 +37,7 @@ Options:
 - `--size`: image size in pixels (default 400)
 - `--grid`: grid spacing in degrees for the 3D sphere (default 15)
 - `--no-labels`: hide axis and angle labels
+- `--panel`: show the angles below the ADI, labeled by axis in the chosen sequence (`--seq`, default ZYX). With `--cmd-quat` or `--cmd-angles`, also shows the commanded angles and the delta (commanded minus actual, wrapped to ±180°).
 - `--out`: output file path (default `adi.png`)
 
 Orbit markers are computed as prograde = v̂, normal = (r × v)̂, with retrograde and anti-normal as their negatives. Markers are fixed to the reference (J2000) frame, so they move relative to the body features as the actual attitude changes. Markers on the far side of the ball are hidden.
