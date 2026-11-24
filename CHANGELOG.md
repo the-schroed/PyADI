@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Added `--panel` to show actual, commanded, and delta Euler angles below the ADI, labeled by axis.
+- Added `--panel` to show actual, commanded, and delta Euler angles below the ADI, labeled by axis. Also available in the FastAPI demo.
 - Added support for all 24 Euler sequences (proper and Tait-Bryan, intrinsic and extrinsic) via `euler_to_quat` / `quat_to_euler` and the CLI `--angles/--seq` and `--cmd-angles/--cmd-seq` options. Rendering is unchanged and always uses ZYX internally.
 - Added prograde, retrograde, normal and anti-normal markers, computed from J2000 position and velocity (`orbit_directions`, `--r/--v`).
 - Added a commanded attitude option: roll and pitch error bars that converge onto the crosshair as the attitude reaches the command (`--cmd-quat`). Clamp and tolerance are adjustable (`--cmd-clamp`, `--cmd-tol`, default 20° and 0.5°).

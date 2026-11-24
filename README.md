@@ -42,7 +42,7 @@ Options:
 
 Orbit markers are computed as prograde = v̂, normal = (r × v)̂, with retrograde and anti-normal as their negatives. Markers are fixed to the reference (J2000) frame, so they move relative to the body features as the actual attitude changes. Markers on the far side of the ball are hidden.
 
-The FastAPI demo (`uvicorn examples.fastapi_demo:app`) has controls for both the commanded attitude and orbit markers.
+The FastAPI demo (`uvicorn examples.fastapi_demo:app`) has controls for the commanded attitude, orbit markers, and the angles panel.
 
 ## FastAPI demo
 ```
