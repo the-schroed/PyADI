@@ -255,6 +255,24 @@ def add_text_panel(img, lines, bg=(10, 10, 20), color=(220, 220, 220), line_heig
     return out
 
 
+def angle_panel_lines(seq, actual, command=None):
+    """Text lines for an angle panel, labeled by rotation axis.
+
+    ``actual`` and ``command`` are angles in degrees in the order given by ``seq``.
+    The delta line (commanded minus actual, wrapped to ±180°) is only added when
+    a command is given.
+    """
+    def fmt(values):
+        return " ".join(f"{axis} {v:+8.2f}" for axis, v in zip(seq.upper(), values))
+
+    lines = [f"Actual  {seq}: {fmt(actual)}"]
+    if command is not None:
+        delta = [(c - a + 180.0) % 360.0 - 180.0 for c, a in zip(command, actual)]
+        lines.append(f"Command {seq}: {fmt(command)}")
+        lines.append(f"Delta   {seq}: {fmt(delta)}")
+    return lines
+
+
 def render_adu(roll, pitch, yaw=0.0, size=400, bg=(20, 20, 30)):
     img = Image.new("RGB", (size, size), bg)
     draw = ImageDraw.Draw(img)

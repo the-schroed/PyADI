@@ -10,21 +10,12 @@ from .frames import (
     quat_to_euler,
     rpy_deg,
 )
-from .render.pillow_backend import add_text_panel, render_adu, render_sphere
-
-
-def _fmt(seq, values):
-    return " ".join(f"{axis} {v:+8.2f}" for axis, v in zip(seq.upper(), values))
-
-
-def _angle_panel(seq, actual, command=None):
-    """Text lines for the angle panel: actual, and commanded and delta when a command is given."""
-    lines = [f"Actual  {seq}: {_fmt(seq, actual)}"]
-    if command is not None:
-        delta = [(c - a + 180.0) % 360.0 - 180.0 for c, a in zip(command, actual)]
-        lines.append(f"Command {seq}: {_fmt(seq, command)}")
-        lines.append(f"Delta   {seq}: {_fmt(seq, delta)}")
-    return lines
+from .render.pillow_backend import (
+    add_text_panel,
+    angle_panel_lines,
+    render_adu,
+    render_sphere,
+)
 
 
 def main():
@@ -106,7 +97,7 @@ def main():
     if args.panel:
         seq = args.seq or "ZYX"
         cmd_angles = quat_to_euler(cmd_quat, seq) if cmd_quat is not None else None
-        img = add_text_panel(img, _angle_panel(seq, quat_to_euler(quat, seq), cmd_angles))
+        img = add_text_panel(img, angle_panel_lines(seq, quat_to_euler(quat, seq), cmd_angles))
     img.save(args.out)
     print(f"saved {args.out}  roll={roll:.2f} pitch={pitch:.2f} yaw={yaw:.2f}")
 

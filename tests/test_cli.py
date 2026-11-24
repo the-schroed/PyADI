@@ -180,7 +180,7 @@ def test_panel_adds_rows_below_the_ball(monkeypatch, tmp_path):
 
 
 def test_angle_panel_lists_delta_with_wraparound():
-    from adi.cli import _angle_panel
+    from adi.render.pillow_backend import angle_panel_lines as _angle_panel
 
     lines = _angle_panel("ZYX", (0.0, 0.0, 170.0), (0.0, 0.0, -170.0))
 
@@ -190,6 +190,7 @@ def test_angle_panel_lists_delta_with_wraparound():
 
 
 def test_angle_panel_without_command_has_only_actual():
-    from adi.cli import _angle_panel
+    from adi.render.pillow_backend import angle_panel_lines as _angle_panel
 
     assert len(_angle_panel("XYZ", (1.0, 2.0, 3.0))) == 1
+
