@@ -9,7 +9,7 @@ def call_endpoint(**overrides):
     params = {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, "size": 120, "grid": 15,
               "cmd_roll": None, "cmd_pitch": None, "cmd_yaw": None,
               "rx": None, "ry": None, "rz": None, "vx": None, "vy": None, "vz": None,
-              "bar_clamp": 20.0, "bar_tolerance": 0.5}
+              "bar_clamp": 20.0, "bar_tolerance": 0.5, "panel": False}
     params.update(overrides)
     return fastapi_demo.adi_rpy(**params)
 
@@ -71,3 +71,39 @@ def test_bar_settings_are_passed_through(seen):
 
     assert seen["bar_clamp"] == 10.0
     assert seen["bar_tolerance"] == 0.1
+
+@pytest.fixture
+def panel_lines(monkeypatch):
+    calls = []
+
+    def fake_panel(img, lines):
+        calls.append(lines)
+        return img
+
+    monkeypatch.setattr(fastapi_demo, "add_text_panel", fake_panel)
+    return calls
+
+
+def test_panel_is_off_by_default(seen, panel_lines):
+    call_endpoint()
+
+    assert panel_lines == []
+
+
+def test_panel_shows_actual_angles_only_without_command(seen, panel_lines):
+    call_endpoint(roll=10.0, pitch=-5.0, yaw=30.0, panel=True)
+
+    assert len(panel_lines) == 1
+    assert len(panel_lines[0]) == 1
+    assert "+30.00" in panel_lines[0][0]
+
+
+def test_panel_adds_command_and_delta_rows(seen, panel_lines):
+    call_endpoint(roll=10.0, pitch=0.0, yaw=0.0, cmd_roll=15.0, cmd_pitch=0.0, cmd_yaw=0.0, panel=True)
+
+    lines = panel_lines[0]
+    assert len(lines) == 3
+    assert "Delta   ZYX" in lines[2]
+    assert "+5.00" in lines[2]
+
+
