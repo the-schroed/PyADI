@@ -1,11 +1,13 @@
 import numpy as np
+import pytest
 
 from adi.frames import normalize, rpy_deg
 
 
 def test_gimbal_lock():
     # pitch near 90
-    _, p, _ = rpy_deg([0.7071, 0, 0.7071, 0])
+    with pytest.warns(UserWarning, match="Gimbal lock"):
+        _, p, _ = rpy_deg([0.7071, 0, 0.7071, 0])
     assert abs(p) > 80
 
 
