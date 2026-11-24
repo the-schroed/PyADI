@@ -167,3 +167,29 @@ def test_commanded_angles_are_converted(monkeypatch, tmp_path):
 
     assert np.allclose(seen["command"], (15.0, 0.0, 0.0))
 
+
+def test_panel_adds_rows_below_the_ball(monkeypatch, tmp_path):
+    plain = tmp_path / "plain.png"
+    panel = tmp_path / "panel.png"
+    run_cli(monkeypatch, "--out", str(plain), "--size", "60")
+    run_cli(monkeypatch, "--out", str(panel), "--size", "60", "--panel")
+
+    assert Image.open(plain).size == (60, 60)
+    assert Image.open(panel).size[0] == 60
+    assert Image.open(panel).size[1] > 60
+
+
+def test_angle_panel_lists_delta_with_wraparound():
+    from adi.cli import _angle_panel
+
+    lines = _angle_panel("ZYX", (0.0, 0.0, 170.0), (0.0, 0.0, -170.0))
+
+    assert len(lines) == 3
+    assert "Delta   ZYX" in lines[2]
+    assert "+20.00" in lines[2]
+
+
+def test_angle_panel_without_command_has_only_actual():
+    from adi.cli import _angle_panel
+
+    assert len(_angle_panel("XYZ", (1.0, 2.0, 3.0))) == 1

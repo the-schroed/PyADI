@@ -244,6 +244,17 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     return img
 
 
+def add_text_panel(img, lines, bg=(10, 10, 20), color=(220, 220, 220), line_height=14, pad=8):
+    """Return a copy of ``img`` with text lines drawn in a panel below it."""
+    font = _load_font()
+    out = Image.new("RGB", (img.width, img.height + 2 * pad + line_height * len(lines)), bg)
+    out.paste(img, (0, 0))
+    draw = ImageDraw.Draw(out)
+    for i, line in enumerate(lines):
+        draw.text((10, img.height + pad + i * line_height), line, fill=color, font=font)
+    return out
+
+
 def render_adu(roll, pitch, yaw=0.0, size=400, bg=(20, 20, 30)):
     img = Image.new("RGB", (size, size), bg)
     draw = ImageDraw.Draw(img)

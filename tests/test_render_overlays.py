@@ -92,3 +92,15 @@ def test_clamp_and_tolerance_are_adjustable():
     loose = render_sphere(0, 0, 0, size=SIZE, command=(3, 0, 0), bar_clamp=20.0, bar_tolerance=5.0)
     assert len(color_pixels(loose, CONVERGED_COLOR)) > 0
     assert len(color_pixels(loose, BAR_COLOR)) == 0
+
+def test_add_text_panel_appends_below_original():
+    from PIL import Image
+
+    from adi.render.pillow_backend import add_text_panel
+
+    base = Image.new("RGB", (50, 40), (255, 0, 0))
+    out = add_text_panel(base, ["one", "two"])
+
+    assert out.size[0] == 50
+    assert out.size[1] > 40
+    assert out.getpixel((0, 0)) == (255, 0, 0)

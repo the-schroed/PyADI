@@ -1,8 +1,30 @@
 """CLI entry point."""
 import argparse
 
-from .frames import EULER_SEQUENCES, euler_to_quat, orbit_directions, rpy_deg
-from .render.pillow_backend import render_adu, render_sphere
+import numpy as np
+
+from .frames import (
+    EULER_SEQUENCES,
+    euler_to_quat,
+    orbit_directions,
+    quat_to_euler,
+    rpy_deg,
+)
+from .render.pillow_backend import add_text_panel, render_adu, render_sphere
+
+
+def _fmt(seq, values):
+    return " ".join(f"{axis} {v:+8.2f}" for axis, v in zip(seq.upper(), values))
+
+
+def _angle_panel(seq, actual, command=None):
+    """Text lines for the angle panel: actual, and commanded and delta when a command is given."""
+    lines = [f"Actual  {seq}: {_fmt(seq, actual)}"]
+    if command is not None:
+        delta = [(c - a + 180.0) % 360.0 - 180.0 for c, a in zip(command, actual)]
+        lines.append(f"Command {seq}: {_fmt(seq, command)}")
+        lines.append(f"Delta   {seq}: {_fmt(seq, delta)}")
+    return lines
 
 
 def main():
@@ -35,6 +57,8 @@ def main():
     p.add_argument("--grid", type=int, default=15, help="grid spacing in degrees")
     p.add_argument("--no-labels", action="store_true", help="disable axis labels")
     p.add_argument("--2d", action="store_true", help="render classic 2D ADI instead of 3D")
+    p.add_argument("--panel", action="store_true",
+                   help="show Euler angles below the ADI, plus commanded and delta angles if --cmd-quat/--cmd-angles is given")
     args = p.parse_args()
 
     if (args.r is None) != (args.v is None):
@@ -60,27 +84,29 @@ def main():
     if args.angles:
         quat = euler_to_quat(args.angles, args.seq or "ZYX")
     elif args.quat:
-        quat = args.quat
+        quat = np.asarray(args.quat, dtype=float)
     else:
-        quat = None
-    if quat is not None:
-        roll, pitch, yaw = rpy_deg(quat)
-    else:
-        roll, pitch, yaw = args.roll, args.pitch, args.yaw
+        quat = euler_to_quat([args.yaw, args.pitch, args.roll], "ZYX")
+    roll, pitch, yaw = rpy_deg(quat)
+
+    cmd_quat = None
+    if args.cmd_angles:
+        cmd_quat = euler_to_quat(args.cmd_angles, args.cmd_seq or "ZYX")
+    elif args.cmd_quat:
+        cmd_quat = np.asarray(args.cmd_quat, dtype=float)
 
     if getattr(args, "2d"):
         img = render_adu(roll, pitch, yaw, size=args.size)
     else:
-        if args.cmd_angles:
-            command = rpy_deg(euler_to_quat(args.cmd_angles, args.cmd_seq or "ZYX"))
-        elif args.cmd_quat:
-            command = rpy_deg(args.cmd_quat)
-        else:
-            command = None
+        command = rpy_deg(cmd_quat) if cmd_quat is not None else None
         markers = orbit_directions(args.r, args.v) if args.r else None
         img = render_sphere(roll, pitch, yaw, size=args.size, grid=args.grid, labels=not args.no_labels,
                             command=command, markers=markers,
                             bar_clamp=args.cmd_clamp, bar_tolerance=args.cmd_tol)
+    if args.panel:
+        seq = args.seq or "ZYX"
+        cmd_angles = quat_to_euler(cmd_quat, seq) if cmd_quat is not None else None
+        img = add_text_panel(img, _angle_panel(seq, quat_to_euler(quat, seq), cmd_angles))
     img.save(args.out)
     print(f"saved {args.out}  roll={roll:.2f} pitch={pitch:.2f} yaw={yaw:.2f}")
 
