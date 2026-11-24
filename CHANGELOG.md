@@ -2,7 +2,7 @@
 
 ## Unreleased
 - Added prograde, retrograde, normal and anti-normal markers, computed from J2000 position and velocity (`orbit_directions`, `--r/--v`).
-- Added a commanded attitude option: roll and pitch error bars that converge onto the crosshair as the attitude reaches the command (`--cmd-quat`).
+- Added a commanded attitude option: roll and pitch error bars that converge onto the crosshair as the attitude reaches the command (`--cmd-quat`). Clamp and tolerance are adjustable (`--cmd-clamp`, `--cmd-tol`, default 20° and 0.5°).
 - FastAPI demo: new controls and query parameters for the commanded attitude and orbit markers. Invalid orbit input returns HTTP 400.
 - `normalize()`: removed a dead branch with no behavior change.
 - FastAPI demo: grid slider now starts at 15 to match its number input.

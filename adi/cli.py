@@ -14,6 +14,10 @@ def main():
     p.add_argument("--yaw", type=float, default=0.0)
     p.add_argument("--cmd-quat", nargs=4, type=float, metavar=("W", "X", "Y", "Z"),
                    help="commanded attitude quaternion, body->J2000, shown as roll/pitch error bars")
+    p.add_argument("--cmd-clamp", type=float, default=20.0,
+                   help="error (degrees) at which command bars pin to the edge (default 20)")
+    p.add_argument("--cmd-tol", type=float, default=0.5,
+                   help="error (degrees) below which command bars converge on the crosshair (default 0.5)")
     p.add_argument("--r", nargs=3, type=float, metavar=("X", "Y", "Z"),
                    help="position vector in J2000; with --v, marks prograde/retrograde/normal/anti-normal")
     p.add_argument("--v", nargs=3, type=float, metavar=("X", "Y", "Z"),
@@ -27,6 +31,8 @@ def main():
 
     if (args.r is None) != (args.v is None):
         p.error("--r and --v must be given together")
+    if args.cmd_clamp <= 0 or args.cmd_tol < 0:
+        p.error("--cmd-clamp must be positive and --cmd-tol must be non-negative")
     overlays = args.cmd_quat is not None or args.r is not None
     if getattr(args, "2d") and overlays:
         p.error("--cmd-quat and --r/--v are only supported in the 3D view")
@@ -42,7 +48,8 @@ def main():
         command = rpy_deg(args.cmd_quat) if args.cmd_quat else None
         markers = orbit_directions(args.r, args.v) if args.r else None
         img = render_sphere(roll, pitch, yaw, size=args.size, grid=args.grid, labels=not args.no_labels,
-                            command=command, markers=markers)
+                            command=command, markers=markers,
+                            bar_clamp=args.cmd_clamp, bar_tolerance=args.cmd_tol)
     img.save(args.out)
     print(f"saved {args.out}  roll={roll:.2f} pitch={pitch:.2f} yaw={yaw:.2f}")
 

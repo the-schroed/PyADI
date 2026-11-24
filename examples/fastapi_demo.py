@@ -23,6 +23,7 @@ def index():
 <label>Grid <input id="grid" type="range" min="5" max="45" value="15"> <input id="gridn" type="number" min="5" max="45" value="15"></label><br>
 <label><input id="showcmd" type="checkbox"> Commanded attitude (error bars)</label>
 Roll <input id="cmdroll" type="number" value="0"> Pitch <input id="cmdpitch" type="number" value="0"> Yaw <input id="cmdyaw" type="number" value="0"><br>
+Clamp (deg) <input id="cmdclamp" type="number" min="0.1" step="0.5" value="20"> Tolerance (deg) <input id="cmdtol" type="number" min="0" step="0.1" value="0.5"><br>
 <label><input id="showorb" type="checkbox"> Orbit markers (J2000)</label>
 r <input id="rx" type="number" value="7000"> <input id="ry" type="number" value="0"> <input id="rz" type="number" value="0">
 v <input id="vx" type="number" value="0"> <input id="vy" type="number" value="7.5"> <input id="vz" type="number" value="0"><br>
@@ -41,7 +42,7 @@ function update(){
   const g=document.getElementById('grid').value;
   let extra='';
   if(document.getElementById('showcmd').checked){
-    extra+=`&cmd_roll=${document.getElementById('cmdroll').value}&cmd_pitch=${document.getElementById('cmdpitch').value}&cmd_yaw=${document.getElementById('cmdyaw').value}`;
+    extra+=`&cmd_roll=${document.getElementById('cmdroll').value}&cmd_pitch=${document.getElementById('cmdpitch').value}&cmd_yaw=${document.getElementById('cmdyaw').value}&bar_clamp=${document.getElementById('cmdclamp').value}&bar_tolerance=${document.getElementById('cmdtol').value}`;
   }
   if(document.getElementById('showorb').checked){
     for(const k of ['rx','ry','rz','vx','vy','vz']){extra+=`&${k}=${document.getElementById(k).value}`;}
@@ -49,7 +50,7 @@ function update(){
   document.getElementById('adi').src=`/adi_rpy.png?roll=${r}&pitch=${p}&yaw=${y}&size=${s}&grid=${g}${extra}&t=${Date.now()}`;
 }
 sync('roll','rolln');sync('pitch','pitchn');sync('yaw','yawn');sync('size','sizen');sync('grid','gridn');
-for(const id of ['showcmd','cmdroll','cmdpitch','cmdyaw','showorb','rx','ry','rz','vx','vy','vz']){
+for(const id of ['showcmd','cmdroll','cmdpitch','cmdyaw','cmdclamp','cmdtol','showorb','rx','ry','rz','vx','vy','vz']){
   document.getElementById(id).addEventListener('input',update);
   document.getElementById(id).addEventListener('change',update);
 }
@@ -111,6 +112,8 @@ def adi_rpy(
     vx: float | None = Query(None),
     vy: float | None = Query(None),
     vz: float | None = Query(None),
+    bar_clamp: float = Query(20.0, gt=0),
+    bar_tolerance: float = Query(0.5, ge=0),
 ):
     command = None
     if any(a is not None for a in (cmd_roll, cmd_pitch, cmd_yaw)):
@@ -122,7 +125,8 @@ def adi_rpy(
             markers = orbit_directions([rx, ry, rz], [vx, vy, vz])
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-    img = render_sphere(roll, pitch, yaw, size=size, grid=grid, command=command, markers=markers)
+    img = render_sphere(roll, pitch, yaw, size=size, grid=grid, command=command, markers=markers,
+                        bar_clamp=bar_clamp, bar_tolerance=bar_tolerance)
     buf = BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)

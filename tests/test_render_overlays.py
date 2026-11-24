@@ -83,3 +83,12 @@ def test_back_side_markers_are_hidden():
     img = render_sphere(0, 0, 0, size=SIZE, markers=markers)
 
     assert len(color_pixels(img, (255, 170, 255))) == 0
+
+def test_clamp_and_tolerance_are_adjustable():
+    # 3 degrees of error: clamped at a 2 degree clamp, inside a 5 degree tolerance.
+    tight = render_sphere(0, 0, 0, size=SIZE, command=(3, 0, 0), bar_clamp=2.0, bar_tolerance=0.1)
+    assert len(color_pixels(tight, CLAMPED_COLOR)) > 0
+
+    loose = render_sphere(0, 0, 0, size=SIZE, command=(3, 0, 0), bar_clamp=20.0, bar_tolerance=5.0)
+    assert len(color_pixels(loose, CONVERGED_COLOR)) > 0
+    assert len(color_pixels(loose, BAR_COLOR)) == 0

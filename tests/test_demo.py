@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from fastapi import HTTPException
 from PIL import Image
 
@@ -8,7 +8,8 @@ from examples import fastapi_demo
 def call_endpoint(**overrides):
     params = {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, "size": 120, "grid": 15,
               "cmd_roll": None, "cmd_pitch": None, "cmd_yaw": None,
-              "rx": None, "ry": None, "rz": None, "vx": None, "vy": None, "vz": None}
+              "rx": None, "ry": None, "rz": None, "vx": None, "vy": None, "vz": None,
+              "bar_clamp": 20.0, "bar_tolerance": 0.5}
     params.update(overrides)
     return fastapi_demo.adi_rpy(**params)
 
@@ -17,8 +18,8 @@ def call_endpoint(**overrides):
 def seen(monkeypatch):
     captured = {}
 
-    def fake_sphere(roll, pitch, yaw, size, grid, command, markers):
-        captured.update(command=command, markers=markers)
+    def fake_sphere(roll, pitch, yaw, size, grid, command, markers, bar_clamp, bar_tolerance):
+        captured.update(command=command, markers=markers, bar_clamp=bar_clamp, bar_tolerance=bar_tolerance)
         return Image.new("RGB", (1, 1))
 
     monkeypatch.setattr(fastapi_demo, "render_sphere", fake_sphere)
@@ -28,7 +29,7 @@ def seen(monkeypatch):
 def test_defaults_render_without_overlays(seen):
     call_endpoint()
 
-    assert seen == {"command": None, "markers": None}
+    assert seen == {"command": None, "markers": None, "bar_clamp": 20.0, "bar_tolerance": 0.5}
 
 
 def test_commanded_attitude_is_passed_through(seen):
@@ -63,3 +64,10 @@ def test_collinear_orbit_returns_400(seen):
 
     assert exc.value.status_code == 400
     assert "collinear" in exc.value.detail
+
+
+def test_bar_settings_are_passed_through(seen):
+    call_endpoint(cmd_roll=1.0, bar_clamp=10.0, bar_tolerance=0.1)
+
+    assert seen["bar_clamp"] == 10.0
+    assert seen["bar_tolerance"] == 0.1

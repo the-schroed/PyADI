@@ -40,23 +40,21 @@ _MARKER_STYLE = {
 }
 
 
-_BAR_RANGE_DEG = 20.0
-_BAR_TOLERANCE_DEG = 0.5
 _BAR_COLOR = (0, 255, 255)
 _BAR_CLAMPED_COLOR = (255, 140, 0)
 _BAR_CONVERGED_COLOR = (80, 255, 80)
 
 
-def _bar_offset(error_deg, px_per_deg):
+def _bar_offset(error_deg, px_per_deg, clamp_deg, tolerance_deg):
     """Pixel offset and color for one error bar."""
-    if abs(error_deg) < _BAR_TOLERANCE_DEG:
+    if abs(error_deg) < tolerance_deg:
         return 0.0, _BAR_CONVERGED_COLOR
-    clamped = max(-_BAR_RANGE_DEG, min(_BAR_RANGE_DEG, error_deg))
+    clamped = max(-clamp_deg, min(clamp_deg, error_deg))
     color = _BAR_CLAMPED_COLOR if clamped != error_deg else _BAR_COLOR
     return clamped * px_per_deg, color
 
 
-def _draw_command_bars(draw, roll, pitch, command, cx, cy, r):
+def _draw_command_bars(draw, roll, pitch, command, cx, cy, r, clamp_deg, tolerance_deg):
     """Roll (vertical bar) and pitch (horizontal bar) error to the commanded attitude.
 
     Each bar sits offset from the crosshair by its error, so it points toward
@@ -64,9 +62,9 @@ def _draw_command_bars(draw, roll, pitch, command, cx, cy, r):
     """
     roll_err = (command[0] - roll + 180.0) % 360.0 - 180.0
     pitch_err = command[1] - pitch
-    px_per_deg = 0.85 * r / _BAR_RANGE_DEG
-    dx, roll_color = _bar_offset(roll_err, px_per_deg)
-    dy, pitch_color = _bar_offset(pitch_err, px_per_deg)
+    px_per_deg = 0.85 * r / clamp_deg
+    dx, roll_color = _bar_offset(roll_err, px_per_deg, clamp_deg, tolerance_deg)
+    dy, pitch_color = _bar_offset(pitch_err, px_per_deg, clamp_deg, tolerance_deg)
     half = 0.25 * r
     draw.line((cx + dx, cy - half, cx + dx, cy + half), fill=roll_color, width=3)
     draw.line((cx - half, cy - dy, cx + half, cy - dy), fill=pitch_color, width=3)
@@ -86,7 +84,7 @@ def _draw_markers(draw, markers, cx, cy, r, font):
 def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labels=True,
                   sky=(70, 130, 220), ground=(140, 90, 45), grid_color=(200, 200, 200),
                   label_color=(220, 220, 220), horizon_color=(255, 255, 255),
-                  command=None, markers=None):
+                  command=None, markers=None, bar_clamp=20.0, bar_tolerance=0.5):
     """Render a 3D ADI sphere to a PIL Image.
 
     Parameters
@@ -110,6 +108,10 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     markers : dict, optional
         Unit vectors in the reference (J2000) frame, keyed by name
         (``prograde``, ``retrograde``, ``normal``, ``anti-normal``).
+    bar_clamp : float
+        Error in degrees at which a bar pins to the edge (and turns orange).
+    bar_tolerance : float
+        Error in degrees below which a bar snaps to the crosshair (and turns green).
 
     Returns
     -------
@@ -229,7 +231,7 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
             draw.text((x, y), text, fill=(255, 255, 255), font=font)
 
     if command is not None:
-        _draw_command_bars(draw, roll, pitch, command, cx, cy, r)
+        _draw_command_bars(draw, roll, pitch, command, cx, cy, r, bar_clamp, bar_tolerance)
 
     if markers:
         _draw_markers(draw, markers, cx, cy, r, font)

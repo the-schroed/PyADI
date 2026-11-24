@@ -53,7 +53,7 @@ def test_2d_flag_selects_render_adu(monkeypatch, tmp_path):
 def test_sphere_options_are_passed_through(monkeypatch, tmp_path, extra, expected):
     seen = {}
 
-    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers):
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
         seen.update(size=size, grid=grid, labels=labels)
         return Image.new("RGB", (1, 1))
 
@@ -65,7 +65,7 @@ def test_sphere_options_are_passed_through(monkeypatch, tmp_path, extra, expecte
 def test_overlay_inputs_are_passed_to_renderer(monkeypatch, tmp_path):
     seen = {}
 
-    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers):
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
         seen.update(command=command, markers=markers)
         return Image.new("RGB", (1, 1))
 
@@ -82,7 +82,7 @@ def test_overlay_inputs_are_passed_to_renderer(monkeypatch, tmp_path):
 def test_no_overlays_by_default(monkeypatch, tmp_path):
     seen = {}
 
-    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers):
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
         seen.update(command=command, markers=markers)
         return Image.new("RGB", (1, 1))
 
@@ -103,3 +103,22 @@ def test_overlays_rejected_with_2d(monkeypatch, tmp_path, capsys):
         run_cli(monkeypatch, "--2d", "--cmd-quat", "1", "0", "0", "0", "--out", str(tmp_path / "o.png"))
     assert "only supported in the 3D view" in capsys.readouterr().err
 
+
+
+def test_bar_settings_are_passed_through(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
+        seen.update(bar_clamp=bar_clamp, bar_tolerance=bar_tolerance)
+        return Image.new("RGB", (1, 1))
+
+    monkeypatch.setattr("adi.cli.render_sphere", fake_sphere)
+    run_cli(monkeypatch, "--out", str(tmp_path / "o.png"), "--cmd-clamp", "10", "--cmd-tol", "0.1")
+
+    assert seen == {"bar_clamp": 10.0, "bar_tolerance": 0.1}
+
+
+def test_invalid_bar_settings_are_errors(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, "--cmd-clamp", "0", "--out", str(tmp_path / "o.png"))
+    assert "--cmd-clamp must be positive" in capsys.readouterr().err
