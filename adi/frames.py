@@ -93,6 +93,38 @@ def to_rotation(q):
     return Rotation.from_quat([q[1], q[2], q[3], q[0]])
 
 
+def orbit_directions(r, v):
+    """Unit vectors for prograde, retrograde, normal and anti-normal.
+
+    Parameters
+    ----------
+    r, v : array_like
+        Position and velocity vectors in the same inertial frame (e.g. J2000).
+
+    Returns
+    -------
+    dict
+        Keys ``prograde``, ``retrograde``, ``normal``, ``anti-normal``.
+    """
+    r = np.asarray(r, dtype=float).ravel()
+    v = np.asarray(v, dtype=float).ravel()
+    vn = np.linalg.norm(v)
+    if vn == 0:
+        raise ValueError("zero velocity vector")
+    h = np.cross(r, v)
+    hn = np.linalg.norm(h)
+    if hn == 0:
+        raise ValueError("position and velocity are collinear")
+    prograde = v / vn
+    normal = h / hn
+    return {
+        "prograde": prograde,
+        "retrograde": -prograde,
+        "normal": normal,
+        "anti-normal": -normal,
+    }
+
+
 def rpy_deg(q):
     """Convert quaternion to roll, pitch, yaw (degrees).
 
