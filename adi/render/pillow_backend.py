@@ -40,50 +40,36 @@ _MARKER_STYLE = {
 }
 
 
-def _grid_bodies(grid):
-    """Body-frame point sets for the horizon, parallels and meridians."""
-    angles = np.radians(np.arange(361))
-    sets = [np.stack([np.cos(angles), np.sin(angles), np.zeros_like(angles)], axis=1)]
-    for lat in range(-90, 91, grid):
-        la = math.radians(lat)
-        sets.append(np.stack([math.cos(la) * np.cos(angles), math.cos(la) * np.sin(angles),
-                              np.full_like(angles, math.sin(la))], axis=1))
-    lats = np.radians(np.arange(-90, 91))
-    for lo in range(0, 360, grid):
-        lo_r = math.radians(lo)
-        sets.append(np.stack([np.cos(lats) * math.cos(lo_r), np.cos(lats) * math.sin(lo_r),
-                              np.sin(lats)], axis=1))
-    return sets
+_BAR_RANGE_DEG = 20.0
+_BAR_TOLERANCE_DEG = 0.5
+_BAR_COLOR = (0, 255, 255)
+_BAR_CLAMPED_COLOR = (255, 140, 0)
+_BAR_CONVERGED_COLOR = (80, 255, 80)
 
 
-def _visible_runs(R, bodies, cx, cy, r):
-    """Project body-frame points to the image and split them into front-facing runs."""
-    view = bodies @ R.T
-    runs, seg = [], []
-    for pv in view:
-        if pv[2] < 0:
-            if len(seg) > 1:
-                runs.append(seg)
-            seg = []
-            continue
-        seg.append((cx + pv[0] * r, cy - pv[1] * r))
-    if len(seg) > 1:
-        runs.append(seg)
-    return runs
+def _bar_offset(error_deg, px_per_deg):
+    """Pixel offset and color for one error bar."""
+    if abs(error_deg) < _BAR_TOLERANCE_DEG:
+        return 0.0, _BAR_CONVERGED_COLOR
+    clamped = max(-_BAR_RANGE_DEG, min(_BAR_RANGE_DEG, error_deg))
+    color = _BAR_CLAMPED_COLOR if clamped != error_deg else _BAR_COLOR
+    return clamped * px_per_deg, color
 
 
-def _dashed_line(draw, pts, fill, width=1, dash=8):
-    pts = np.asarray(pts, dtype=float)
-    seg_len = np.hypot(*np.diff(pts, axis=0).T)
-    start = np.concatenate([[0.0], np.cumsum(seg_len)[:-1]])
-    for i in np.flatnonzero((start // dash) % 2 == 0):
-        draw.line([tuple(pts[i]), tuple(pts[i + 1])], fill=fill, width=width)
+def _draw_command_bars(draw, roll, pitch, command, cx, cy, r):
+    """Roll (vertical bar) and pitch (horizontal bar) error to the commanded attitude.
 
-
-def _draw_command_lines(draw, R, cx, cy, r, grid, color):
-    for bodies in _grid_bodies(grid):
-        for run in _visible_runs(R, bodies, cx, cy, r):
-            _dashed_line(draw, run, color)
+    Each bar sits offset from the crosshair by its error, so it points toward
+    the command. Bars converge onto the crosshair within tolerance.
+    """
+    roll_err = (command[0] - roll + 180.0) % 360.0 - 180.0
+    pitch_err = command[1] - pitch
+    px_per_deg = 0.85 * r / _BAR_RANGE_DEG
+    dx, roll_color = _bar_offset(roll_err, px_per_deg)
+    dy, pitch_color = _bar_offset(pitch_err, px_per_deg)
+    half = 0.25 * r
+    draw.line((cx + dx, cy - half, cx + dx, cy + half), fill=roll_color, width=3)
+    draw.line((cx - half, cy - dy, cx + half, cy - dy), fill=pitch_color, width=3)
 
 
 def _draw_markers(draw, markers, cx, cy, r, font):
@@ -100,7 +86,7 @@ def _draw_markers(draw, markers, cx, cy, r, font):
 def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labels=True,
                   sky=(70, 130, 220), ground=(140, 90, 45), grid_color=(200, 200, 200),
                   label_color=(220, 220, 220), horizon_color=(255, 255, 255),
-                  command=None, markers=None, command_color=(255, 170, 0)):
+                  command=None, markers=None):
     """Render a 3D ADI sphere to a PIL Image.
 
     Parameters
@@ -118,13 +104,12 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
     sky, ground, grid_color, label_color, horizon_color : tuple
         Colors.
     command : tuple of float, optional
-        Commanded attitude (roll, pitch, yaw) in degrees. Its horizon and grid
-        are drawn as dashed lines over the actual attitude.
+        Commanded attitude (roll, pitch, yaw) in degrees. Roll and pitch error
+        are drawn as bars that converge onto the crosshair as the attitude
+        reaches the command. Yaw is not shown.
     markers : dict, optional
         Unit vectors in the reference (J2000) frame, keyed by name
         (``prograde``, ``retrograde``, ``normal``, ``anti-normal``).
-    command_color : tuple
-        Color of the commanded-attitude lines.
 
     Returns
     -------
@@ -244,8 +229,7 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
             draw.text((x, y), text, fill=(255, 255, 255), font=font)
 
     if command is not None:
-        R_cmd = Rotation.from_euler("ZYX", [command[2], command[1], command[0]], degrees=True).as_matrix()
-        _draw_command_lines(draw, R_cmd, cx, cy, r, grid, command_color)
+        _draw_command_bars(draw, roll, pitch, command, cx, cy, r)
 
     if markers:
         _draw_markers(draw, markers, cx, cy, r, font)
