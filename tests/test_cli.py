@@ -122,3 +122,48 @@ def test_invalid_bar_settings_are_errors(monkeypatch, tmp_path, capsys):
     with pytest.raises(SystemExit):
         run_cli(monkeypatch, "--cmd-clamp", "0", "--out", str(tmp_path / "o.png"))
     assert "--cmd-clamp must be positive" in capsys.readouterr().err
+
+def test_angles_with_sequence_match_quaternion(monkeypatch, tmp_path, capsys):
+    run_cli(monkeypatch, "--angles", "30", "10", "20", "--seq", "XYZ", "--out", str(tmp_path / "a.png"), "--size", "60")
+    from adi.frames import euler_to_quat, rpy_deg
+
+    expected = rpy_deg(euler_to_quat([30, 10, 20], "XYZ"))
+    assert f"roll={expected[0]:.2f}" in capsys.readouterr().out
+
+
+def test_angles_default_to_zyx(monkeypatch, tmp_path, capsys):
+    run_cli(monkeypatch, "--angles", "30", "10", "20", "--out", str(tmp_path / "a.png"), "--size", "60")
+
+    assert "roll=20.00 pitch=10.00 yaw=30.00" in capsys.readouterr().out
+
+
+def test_unknown_sequence_is_an_error(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, "--angles", "1", "2", "3", "--seq", "XYY", "--out", str(tmp_path / "a.png"))
+    assert "unknown Euler sequence" in capsys.readouterr().err
+
+
+def test_seq_requires_angles(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, "--seq", "XYZ", "--out", str(tmp_path / "a.png"))
+    assert "--seq requires --angles" in capsys.readouterr().err
+
+
+def test_angles_and_quat_are_exclusive(monkeypatch, tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, "--angles", "1", "2", "3", "--quat", "1", "0", "0", "0", "--out", str(tmp_path / "a.png"))
+    assert "mutually exclusive" in capsys.readouterr().err
+
+
+def test_commanded_angles_are_converted(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
+        seen["command"] = command
+        return Image.new("RGB", (1, 1))
+
+    monkeypatch.setattr("adi.cli.render_sphere", fake_sphere)
+    run_cli(monkeypatch, "--out", str(tmp_path / "o.png"), "--cmd-angles", "0", "0", "15", "--cmd-seq", "ZYX")
+
+    assert np.allclose(seen["command"], (15.0, 0.0, 0.0))
+
