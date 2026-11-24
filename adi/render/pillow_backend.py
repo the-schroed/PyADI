@@ -32,9 +32,75 @@ def _fill_sphere(img, R, cx, cy, r, sky, ground):
     return Image.fromarray(pixels)
 
 
+_MARKER_STYLE = {
+    "prograde": ((80, 255, 80), "PRO"),
+    "retrograde": ((255, 80, 80), "RETRO"),
+    "normal": ((255, 0, 255), "NRM"),
+    "anti-normal": ((255, 170, 255), "ANTI-NRM"),
+}
+
+
+def _grid_bodies(grid):
+    """Body-frame point sets for the horizon, parallels and meridians."""
+    angles = np.radians(np.arange(361))
+    sets = [np.stack([np.cos(angles), np.sin(angles), np.zeros_like(angles)], axis=1)]
+    for lat in range(-90, 91, grid):
+        la = math.radians(lat)
+        sets.append(np.stack([math.cos(la) * np.cos(angles), math.cos(la) * np.sin(angles),
+                              np.full_like(angles, math.sin(la))], axis=1))
+    lats = np.radians(np.arange(-90, 91))
+    for lo in range(0, 360, grid):
+        lo_r = math.radians(lo)
+        sets.append(np.stack([np.cos(lats) * math.cos(lo_r), np.cos(lats) * math.sin(lo_r),
+                              np.sin(lats)], axis=1))
+    return sets
+
+
+def _visible_runs(R, bodies, cx, cy, r):
+    """Project body-frame points to the image and split them into front-facing runs."""
+    view = bodies @ R.T
+    runs, seg = [], []
+    for pv in view:
+        if pv[2] < 0:
+            if len(seg) > 1:
+                runs.append(seg)
+            seg = []
+            continue
+        seg.append((cx + pv[0] * r, cy - pv[1] * r))
+    if len(seg) > 1:
+        runs.append(seg)
+    return runs
+
+
+def _dashed_line(draw, pts, fill, width=1, dash=8):
+    pts = np.asarray(pts, dtype=float)
+    seg_len = np.hypot(*np.diff(pts, axis=0).T)
+    start = np.concatenate([[0.0], np.cumsum(seg_len)[:-1]])
+    for i in np.flatnonzero((start // dash) % 2 == 0):
+        draw.line([tuple(pts[i]), tuple(pts[i + 1])], fill=fill, width=width)
+
+
+def _draw_command_lines(draw, R, cx, cy, r, grid, color):
+    for bodies in _grid_bodies(grid):
+        for run in _visible_runs(R, bodies, cx, cy, r):
+            _dashed_line(draw, run, color)
+
+
+def _draw_markers(draw, markers, cx, cy, r, font):
+    for name, vec in markers.items():
+        pv = np.asarray(vec, dtype=float)
+        if pv[2] < 0:
+            continue
+        color, text = _MARKER_STYLE.get(name, ((255, 255, 255), name))
+        x, y = cx + pv[0] * r, cy - pv[1] * r
+        draw.ellipse((x - 4, y - 4, x + 4, y + 4), outline=color, width=2)
+        draw.text((x + 7, y - 6), text, fill=color, font=font)
+
+
 def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labels=True,
                   sky=(70, 130, 220), ground=(140, 90, 45), grid_color=(200, 200, 200),
-                  label_color=(220, 220, 220), horizon_color=(255, 255, 255)):
+                  label_color=(220, 220, 220), horizon_color=(255, 255, 255),
+                  command=None, markers=None, command_color=(255, 170, 0)):
     """Render a 3D ADI sphere to a PIL Image.
 
     Parameters
@@ -51,6 +117,14 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
         Whether to draw labels.
     sky, ground, grid_color, label_color, horizon_color : tuple
         Colors.
+    command : tuple of float, optional
+        Commanded attitude (roll, pitch, yaw) in degrees. Its horizon and grid
+        are drawn as dashed lines over the actual attitude.
+    markers : dict, optional
+        Unit vectors in the reference (J2000) frame, keyed by name
+        (``prograde``, ``retrograde``, ``normal``, ``anti-normal``).
+    command_color : tuple
+        Color of the commanded-attitude lines.
 
     Returns
     -------
@@ -168,6 +242,13 @@ def render_sphere(roll, pitch, yaw=0.0, size=400, bg=(10, 10, 20), grid=15, labe
             x = cx + p_view[0] * (r + 8)
             y = cy - p_view[1] * (r + 8)
             draw.text((x, y), text, fill=(255, 255, 255), font=font)
+
+    if command is not None:
+        R_cmd = Rotation.from_euler("ZYX", [command[2], command[1], command[0]], degrees=True).as_matrix()
+        _draw_command_lines(draw, R_cmd, cx, cy, r, grid, command_color)
+
+    if markers:
+        _draw_markers(draw, markers, cx, cy, r, font)
 
     # crosshair
     draw.line((cx - 15, cy, cx + 15, cy), fill=(255, 255, 0), width=2)
