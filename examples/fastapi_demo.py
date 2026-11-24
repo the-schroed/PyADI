@@ -1,10 +1,10 @@
 """FastAPI demo: serve ADI images from quaternion input, with a control UI."""
 from io import BytesIO
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from adi.frames import rpy_deg
+from adi.frames import orbit_directions, rpy_deg
 from adi.render.pillow_backend import render_sphere
 
 app = FastAPI(title="ADI Demo")
@@ -21,6 +21,11 @@ def index():
 <label>Yaw <input id="yaw" type="range" min="-180" max="180" value="30"> <input id="yawn" type="number" min="-180" max="180" value="30"></label><br>
 <label>Size <input id="size" type="range" min="200" max="800" value="400"> <input id="sizen" type="number" min="200" max="800" value="400"></label><br>
 <label>Grid <input id="grid" type="range" min="5" max="45" value="15"> <input id="gridn" type="number" min="5" max="45" value="15"></label><br>
+<label><input id="showcmd" type="checkbox"> Commanded attitude (dashed)</label>
+Roll <input id="cmdroll" type="number" value="0"> Pitch <input id="cmdpitch" type="number" value="0"> Yaw <input id="cmdyaw" type="number" value="0"><br>
+<label><input id="showorb" type="checkbox"> Orbit markers (J2000)</label>
+r <input id="rx" type="number" value="7000"> <input id="ry" type="number" value="0"> <input id="rz" type="number" value="0">
+v <input id="vx" type="number" value="0"> <input id="vy" type="number" value="7.5"> <input id="vz" type="number" value="0"><br>
 <img id="adi" src="/adi.png" width="400">
 <script>
 function sync(sliderId,numId){
@@ -34,9 +39,20 @@ function update(){
   const y=document.getElementById('yaw').value;
   const s=document.getElementById('size').value;
   const g=document.getElementById('grid').value;
-  document.getElementById('adi').src=`/adi_rpy.png?roll=${r}&pitch=${p}&yaw=${y}&size=${s}&grid=${g}&t=${Date.now()}`;
+  let extra='';
+  if(document.getElementById('showcmd').checked){
+    extra+=`&cmd_roll=${document.getElementById('cmdroll').value}&cmd_pitch=${document.getElementById('cmdpitch').value}&cmd_yaw=${document.getElementById('cmdyaw').value}`;
+  }
+  if(document.getElementById('showorb').checked){
+    for(const k of ['rx','ry','rz','vx','vy','vz']){extra+=`&${k}=${document.getElementById(k).value}`;}
+  }
+  document.getElementById('adi').src=`/adi_rpy.png?roll=${r}&pitch=${p}&yaw=${y}&size=${s}&grid=${g}${extra}&t=${Date.now()}`;
 }
 sync('roll','rolln');sync('pitch','pitchn');sync('yaw','yawn');sync('size','sizen');sync('grid','gridn');
+for(const id of ['showcmd','cmdroll','cmdpitch','cmdyaw','showorb','rx','ry','rz','vx','vy','vz']){
+  document.getElementById(id).addEventListener('input',update);
+  document.getElementById(id).addEventListener('change',update);
+}
 update();
 </script>
 </body></html>"""
@@ -86,8 +102,27 @@ def adi_rpy(
     yaw: float = Query(0.0),
     size: int = Query(400),
     grid: int = Query(15),
+    cmd_roll: float | None = Query(None),
+    cmd_pitch: float | None = Query(None),
+    cmd_yaw: float | None = Query(None),
+    rx: float | None = Query(None),
+    ry: float | None = Query(None),
+    rz: float | None = Query(None),
+    vx: float | None = Query(None),
+    vy: float | None = Query(None),
+    vz: float | None = Query(None),
 ):
-    img = render_sphere(roll, pitch, yaw, size=size, grid=grid)
+    command = None
+    if any(a is not None for a in (cmd_roll, cmd_pitch, cmd_yaw)):
+        command = (cmd_roll or 0.0, cmd_pitch or 0.0, cmd_yaw or 0.0)
+    markers = None
+    orbit = (rx, ry, rz, vx, vy, vz)
+    if all(a is not None for a in orbit):
+        try:
+            markers = orbit_directions([rx, ry, rz], [vx, vy, vz])
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+    img = render_sphere(roll, pitch, yaw, size=size, grid=grid, command=command, markers=markers)
     buf = BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
