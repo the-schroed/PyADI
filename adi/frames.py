@@ -125,6 +125,55 @@ def orbit_directions(r, v):
     }
 
 
+_BASE_SEQUENCES = ("XYX", "XYZ", "XZX", "XZY", "YXY", "YXZ", "YZX", "YZY", "ZXY", "ZXZ", "ZYX", "ZYZ")
+EULER_SEQUENCES = _BASE_SEQUENCES + tuple(s.lower() for s in _BASE_SEQUENCES)
+
+
+def _check_sequence(seq):
+    if seq not in EULER_SEQUENCES:
+        raise ValueError(f"unknown Euler sequence {seq!r}; expected one of {', '.join(EULER_SEQUENCES)}")
+
+
+def euler_to_quat(angles, seq="ZYX"):
+    """Convert Euler angles in degrees to a scalar-first quaternion.
+
+    Parameters
+    ----------
+    angles : array_like
+        Three angles in degrees, in the order given by ``seq``.
+    seq : str
+        Rotation sequence. Uppercase is intrinsic, lowercase is extrinsic.
+        All 24 proper Euler and Tait-Bryan sequences are supported.
+
+    Returns
+    -------
+    ndarray
+        Quaternion [w, x, y, z].
+    """
+    _check_sequence(seq)
+    x, y, z, w = Rotation.from_euler(seq, np.asarray(angles, dtype=float).ravel(), degrees=True).as_quat()
+    return np.array([w, x, y, z])
+
+
+def quat_to_euler(q, seq="ZYX"):
+    """Convert a quaternion to Euler angles in degrees.
+
+    Parameters
+    ----------
+    q : array_like
+        Quaternion [w, x, y, z].
+    seq : str
+        Rotation sequence. See :func:`euler_to_quat`.
+
+    Returns
+    -------
+    tuple
+        Three angles in degrees, in the order given by ``seq``.
+    """
+    _check_sequence(seq)
+    return tuple(float(a) for a in to_rotation(q).as_euler(seq, degrees=True))
+
+
 def rpy_deg(q):
     """Convert quaternion to roll, pitch, yaw (degrees).
 
