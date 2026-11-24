@@ -20,7 +20,7 @@ def index():
 <label>Pitch <input id="pitch" type="range" min="-90" max="90" value="-10"> <input id="pitchn" type="number" min="-90" max="90" value="-10"></label><br>
 <label>Yaw <input id="yaw" type="range" min="-180" max="180" value="30"> <input id="yawn" type="number" min="-180" max="180" value="30"></label><br>
 <label>Size <input id="size" type="range" min="200" max="800" value="400"> <input id="sizen" type="number" min="200" max="800" value="400"></label><br>
-<label>Grid <input id="grid" type="range" min="5" max="45" value="30"> <input id="gridn" type="number" min="5" max="45" value="15"></label><br>
+<label>Grid <input id="grid" type="range" min="5" max="45" value="15"> <input id="gridn" type="number" min="5" max="45" value="15"></label><br>
 <img id="adi" src="/adi.png" width="400">
 <script>
 function sync(sliderId,numId){
