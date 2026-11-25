@@ -93,19 +93,24 @@ def to_rotation(q):
     return Rotation.from_quat([q[1], q[2], q[3], q[0]])
 
 
-def orbit_directions(r, v):
+def orbit_directions(r, v, frame="J2000"):
     """Unit vectors for prograde, retrograde, normal and anti-normal.
 
     Parameters
     ----------
     r, v : array_like
-        Position and velocity vectors in the same inertial frame (e.g. J2000).
+        Position and velocity vectors in J2000.
+    frame : str
+        ``"J2000"`` returns the vectors in J2000. ``"LVLH"`` returns them in
+        the local-vertical/local-horizontal frame (see :func:`lvlh_matrix`).
 
     Returns
     -------
     dict
         Keys ``prograde``, ``retrograde``, ``normal``, ``anti-normal``.
     """
+    if frame not in ("J2000", "LVLH"):
+        raise ValueError(f"unknown frame {frame!r}; expected 'J2000' or 'LVLH'")
     r = np.asarray(r, dtype=float).ravel()
     v = np.asarray(v, dtype=float).ravel()
     vn = np.linalg.norm(v)
@@ -117,12 +122,16 @@ def orbit_directions(r, v):
         raise ValueError("position and velocity are collinear")
     prograde = v / vn
     normal = h / hn
-    return {
+    out = {
         "prograde": prograde,
         "retrograde": -prograde,
         "normal": normal,
         "anti-normal": -normal,
     }
+    if frame == "LVLH":
+        M = lvlh_matrix(r, v)
+        out = {name: M @ vec for name, vec in out.items()}
+    return out
 
 
 _BASE_SEQUENCES = ("XYX", "XYZ", "XZX", "XZY", "YXY", "YXZ", "YZX", "YZY", "ZXY", "ZXZ", "ZYX", "ZYZ")
@@ -172,6 +181,35 @@ def quat_to_euler(q, seq="ZYX"):
     """
     _check_sequence(seq)
     return tuple(float(a) for a in to_rotation(q).as_euler(seq, degrees=True))
+
+
+def lvlh_matrix(r, v):
+    """Rotation matrix from J2000 to LVLH for a position and velocity.
+
+    LVLH axes: Z nadir (-r), Y negative orbit normal (-(r x v)), X completes
+    the right-handed frame. Rows are the LVLH axes in J2000 coordinates, so
+    ``lvlh_matrix(r, v) @ x_j2000`` gives the same vector in LVLH.
+
+    Parameters
+    ----------
+    r, v : array_like
+        Position and velocity vectors in J2000.
+
+    Returns
+    -------
+    ndarray
+        3x3 matrix.
+    """
+    r = np.asarray(r, dtype=float).ravel()
+    v = np.asarray(v, dtype=float).ravel()
+    h = np.cross(r, v)
+    hn = np.linalg.norm(h)
+    if hn == 0:
+        raise ValueError("position and velocity are collinear")
+    z = -r / np.linalg.norm(r)
+    y = -h / hn
+    x = np.cross(y, z)
+    return np.vstack([x, y, z])
 
 
 def rpy_deg(q):
