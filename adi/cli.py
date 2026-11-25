@@ -48,6 +48,9 @@ def main():
     p.add_argument("--grid", type=int, default=15, help="grid spacing in degrees")
     p.add_argument("--no-labels", action="store_true", help="disable axis labels")
     p.add_argument("--2d", action="store_true", help="render classic 2D ADI instead of 3D")
+    p.add_argument("--frame", choices=("j2000", "lvlh"), default="j2000",
+                   help="frame of the attitude inputs and the view: J2000 (body->J2000) or LVLH (body->LVLH, "
+                        "needs --r/--v for markers); default j2000")
     p.add_argument("--panel", action="store_true",
                    help="show Euler angles below the ADI, plus commanded and delta angles if --cmd-quat/--cmd-angles is given")
     args = p.parse_args()
@@ -90,7 +93,7 @@ def main():
         img = render_adu(roll, pitch, yaw, size=args.size)
     else:
         command = rpy_deg(cmd_quat) if cmd_quat is not None else None
-        markers = orbit_directions(args.r, args.v) if args.r else None
+        markers = orbit_directions(args.r, args.v, frame=args.frame.upper()) if args.r else None
         img = render_sphere(roll, pitch, yaw, size=args.size, grid=args.grid, labels=not args.no_labels,
                             command=command, markers=markers,
                             bar_clamp=args.cmd_clamp, bar_tolerance=args.cmd_tol)

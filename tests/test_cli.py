@@ -194,3 +194,29 @@ def test_angle_panel_without_command_has_only_actual():
 
     assert len(_angle_panel("XYZ", (1.0, 2.0, 3.0))) == 1
 
+
+def test_lvlh_frame_transforms_markers(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
+        seen["markers"] = markers
+        return Image.new("RGB", (1, 1))
+
+    monkeypatch.setattr("adi.cli.render_sphere", fake_sphere)
+    run_cli(monkeypatch, "--out", str(tmp_path / "o.png"), "--frame", "lvlh",
+            "--r", "7000", "0", "0", "--v", "0", "7.5", "0")
+
+    assert np.allclose(seen["markers"]["prograde"], [1, 0, 0])
+
+
+def test_j2000_frame_is_the_default_for_markers(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sphere(roll, pitch, yaw, size, grid, labels, command, markers, bar_clamp, bar_tolerance):
+        seen["markers"] = markers
+        return Image.new("RGB", (1, 1))
+
+    monkeypatch.setattr("adi.cli.render_sphere", fake_sphere)
+    run_cli(monkeypatch, "--out", str(tmp_path / "o.png"), "--r", "7000", "0", "0", "--v", "0", "7.5", "0")
+
+    assert np.allclose(seen["markers"]["prograde"], [0, 1, 0])
