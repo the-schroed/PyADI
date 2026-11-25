@@ -33,6 +33,7 @@ Options:
 - `--cmd-clamp DEG`: error at which bars clamp (default 20)
 - `--cmd-tol DEG`: error below which bars converge and turn green (default 0.5)
 - `--r X Y Z` and `--v X Y Z`: J2000 position and velocity. Draws markers for prograde, retrograde, normal and anti-normal. Give both or neither.
+- `--frame {j2000,lvlh}`: frame of the attitude inputs (actual and commanded) and the view. `lvlh` means body→LVLH, with LVLH Z nadir, Y = −(orbit normal), X completing the right-handed frame. In LVLH view, the markers are expressed in LVLH too. Default `j2000`.
 - `--2d`: render the classic 2D ADI instead of the 3D sphere (not compatible with `--cmd-quat` or `--r/--v`)
 - `--size`: image size in pixels (default 400)
 - `--grid`: grid spacing in degrees for the 3D sphere (default 15)
